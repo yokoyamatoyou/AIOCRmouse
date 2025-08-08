@@ -1,0 +1,17 @@
+{
+  "name": "invoice",
+  "keywords": ["請求", "請求書", "御中"],
+  "rois": {
+    "zip_code": {
+      "box": [100, 150, 120, 50],
+      "validation_rule": "regex:^\\d{7}$",
+      "confidence_threshold": 0.9
+    },
+    "price": {
+      "box": [100, 250, 200, 50],
+      "validation_rule": "regex:^[0-9,]+$",
+      "confidence_threshold": 0.9
+    }
+  },
+  "corrections": []
+}
