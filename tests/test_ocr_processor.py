@@ -229,6 +229,11 @@ class LowConfOCR(BaseOCR):
         return "0000", 0.5
 
 
+class HighConfOCR(BaseOCR):
+    async def run(self, image: np.ndarray) -> tuple[str, float]:
+        return "0000", 0.9
+
+
 def test_custom_confidence_threshold(tmp_path):
     workspace_dir = tmp_path / "ws2"
     crops_dir = workspace_dir / "crops"
@@ -239,7 +244,7 @@ def test_custom_confidence_threshold(tmp_path):
 
     rois = {"field_a": {"confidence_threshold": 0.4}}
 
-    processor = OCRProcessor(LowConfOCR(), str(workspace_dir), rois=rois)
+    processor = OCRProcessor(HighConfOCR(), str(workspace_dir), rois=rois)
     results = asyncio.run(processor.process_all())
 
     assert "needs_human" not in results["field_a"]

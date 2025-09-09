@@ -12,6 +12,7 @@ from . import postprocess
 from .config import settings
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class OCRProcessor:
     """OCR処理全体を管理するクラス"""
