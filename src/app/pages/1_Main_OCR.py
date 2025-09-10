@@ -183,7 +183,20 @@ def main() -> None:
                             tasks = [detect(name, img) for name, img in loaded_images]
                             return await asyncio.gather(*tasks)
 
-                        detection_results = asyncio.run(detect_all())
+                        # Use existing event loop in Streamlit environment
+                        try:
+                            loop = asyncio.get_event_loop()
+                            if loop.is_running():
+                                # If we're in a running event loop, create a task
+                                import concurrent.futures
+                                with concurrent.futures.ThreadPoolExecutor() as executor:
+                                    future = executor.submit(asyncio.run, detect_all())
+                                    detection_results = future.result()
+                            else:
+                                detection_results = asyncio.run(detect_all())
+                        except RuntimeError:
+                            # Fallback to asyncio.run if no event loop exists
+                            detection_results = asyncio.run(detect_all())
                         for name, text in detection_results:
                             detected = template_manager.detect_template(text)
                             if detected:

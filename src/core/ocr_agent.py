@@ -198,7 +198,20 @@ class OcrAgent:
             key_mapping=key_mapping,
             corrections=corrections,
         )
-        results = asyncio.run(processor.process_all())
+        # Use existing event loop in Streamlit environment
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If we're in a running event loop, create a task
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, processor.process_all())
+                    results = future.result()
+            else:
+                results = asyncio.run(processor.process_all())
+        except RuntimeError:
+            # Fallback to asyncio.run if no event loop exists
+            results = asyncio.run(processor.process_all())
 
         # Persist to database
         if job_id is None:
