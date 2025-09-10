@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, Tuple, List
 
 from .ocr_bridge import BaseOCR
 from . import postprocess
+from . import preprocess
 from .config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,6 +26,8 @@ class OCRProcessor:
         rois: Optional[Dict[str, Any]] = None,
         key_mapping: Optional[Dict[str, str]] = None,
         corrections: Optional[List[Dict[str, str]]] = None,
+        preprocessing_mode: preprocess.PreprocessingMode = preprocess.PreprocessingMode.STANDARD,
+        enable_preprocessing: bool = True,
     ):
         self.primary_engine = primary_engine
         self.validator_engine = validator_engine
@@ -33,6 +36,8 @@ class OCRProcessor:
         self.rois = rois or {}
         self.key_mapping = key_mapping or {}
         self.corrections = corrections or []
+        self.preprocessing_mode = preprocessing_mode
+        self.enable_preprocessing = enable_preprocessing
 
     def _apply_corrections(self, text: str) -> str:
         """Apply stored corrections to ``text``.
@@ -74,13 +79,24 @@ class OCRProcessor:
             }
             return orig_key, entry
 
+        # 画像前処理を適用
+        if self.enable_preprocessing:
+            image, preprocessing_info = preprocess.preprocess_image(
+                image, 
+                mode=self.preprocessing_mode,
+                quality_threshold=preprocess.ImageQuality.FAIR
+            )
+            logger.info(f"Preprocessing applied to {filename}: {preprocessing_info['applied_operations']}")
+        else:
+            preprocessing_info = {"applied_operations": []}
+
         roi_def = self.rois.get(key, {})
         field_type = (roi_def.get("field_type") or "fixed").lower()
 
         if field_type == "qualitative":
-            return await self._process_qualitative_field(image, filename, key, orig_key, roi_def)
+            return await self._process_qualitative_field(image, filename, key, orig_key, roi_def, preprocessing_info)
         else:
-            return await self._process_fixed_field(image, filename, key, orig_key, roi_def)
+            return await self._process_fixed_field(image, filename, key, orig_key, roi_def, preprocessing_info)
 
     async def _process_fixed_field(
         self,
@@ -89,6 +105,7 @@ class OCRProcessor:
         key: str,
         orig_key: str,
         roi_def: Dict[str, Any],
+        preprocessing_info: Dict[str, Any],
     ) -> Tuple[str, Dict[str, Any]]:
         primary_text, primary_conf = await self.primary_engine.run(image)
         norm_primary = self._apply_corrections(
@@ -191,6 +208,7 @@ class OCRProcessor:
             "score_ocr": score_ocr,
             "score_rule": score_rule,
             "score_agreement": score_agreement,
+            "preprocessing_info": preprocessing_info,
         }
         if norm_secondary is not None:
             entry["text_nano"] = norm_secondary
@@ -208,9 +226,10 @@ class OCRProcessor:
         key: str,
         orig_key: str,
         roi_def: Dict[str, Any],
+        preprocessing_info: Dict[str, Any],
     ) -> Tuple[str, Dict[str, Any]]:
         # 現段階では固定フィールドと同一の処理。将来的にロジックを分岐させる。
-        return await self._process_fixed_field(image, filename, key, orig_key, roi_def)
+        return await self._process_fixed_field(image, filename, key, orig_key, roi_def, preprocessing_info)
 
     async def process_all(self, max_concurrency: Optional[int] = None) -> dict:
         """cropsディレクトリ内の画像を並行処理し、結果をJSONにまとめる

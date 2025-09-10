@@ -13,6 +13,7 @@ import streamlit as st
 from core.ocr_bridge import get_available_engines
 from app.cache_utils import get_template_manager, get_db_manager, list_templates
 from core.ocr_agent import OcrAgent
+from core import preprocess
 
 
 class LocalUploadedFile:
@@ -42,6 +43,7 @@ def main() -> None:
     st.sidebar.page_link("pages/3_Dashboard.py", label="ダッシュボード")
     st.sidebar.page_link("pages/4_Admin.py", label="管理設定")
 
+    # OCRエンジン選択
     engines = get_available_engines()
     engine_names = list(engines.keys())
     # 既定は一次OCRに指定された nano モデル
@@ -50,6 +52,26 @@ def main() -> None:
         "OCRエンジンを選択",
         tuple(engine_names),
         index=default_index,
+    )
+    
+    # 前処理モード選択
+    preprocessing_modes = {
+        "標準": "standard",
+        "手書き文字特化": "handwriting", 
+        "印刷文字特化": "printed",
+        "混在コンテンツ": "mixed"
+    }
+    preprocessing_mode_choice = st.sidebar.selectbox(
+        "前処理モード",
+        list(preprocessing_modes.keys()),
+        index=0,
+    )
+    
+    # 前処理の有効/無効
+    enable_preprocessing = st.sidebar.checkbox(
+        "画像前処理を有効にする",
+        value=True,
+        help="画像の品質を自動評価し、必要に応じて前処理を適用します"
     )
 
     # --- メイン画面 ---
@@ -121,6 +143,9 @@ def main() -> None:
             # バリデータは mini を既定にする（ユーザの要望: 一次 nano / 二次 mini）
             validator_cls = engines.get("GPT-5-mini-2025-08-07") or list(engines.values())[0]
             nano_engine = validator_cls()
+            
+            # 前処理モードを設定
+            preprocessing_mode = preprocess.PreprocessingMode(preprocessing_modes[preprocessing_mode_choice])
 
             # Create a single job to group all documents in this run
             job_id = db.create_job(template_option, datetime.now().isoformat())
@@ -242,7 +267,17 @@ def main() -> None:
                     level = info.get("confidence_level", "")
                     needs_human = info.get("needs_human", False)
                     icon = "✅" if not needs_human else "⚠️"
+                    
+                    # 前処理情報の表示
+                    preprocessing_info = info.get("preprocessing_info", {})
+                    applied_ops = preprocessing_info.get("applied_operations", [])
+                    quality = preprocessing_info.get("quality", "unknown")
+                    
                     st.write(f"{icon} {field}: 信頼度 {conf_score:.2f} ({level})")
+                    if applied_ops:
+                        st.caption(f"前処理: {', '.join(applied_ops)} | 品質: {quality}")
+                    else:
+                        st.caption(f"前処理: なし | 品質: {quality}")
 
 
 if __name__ == "__main__":
