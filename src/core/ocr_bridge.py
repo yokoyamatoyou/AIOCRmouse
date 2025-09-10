@@ -20,10 +20,21 @@ class BaseOCR(ABC):
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
         """画像を受け取り、(テキスト, 信頼度) のタプルを返す"""
 
-    async def _request_openai(self, image: np.ndarray, model: str) -> Tuple[str, float]:
+    async def _request_openai(self, image: np.ndarray, model: str, prompt_type: str = "standard") -> Tuple[str, float]:
         """共通のOpenAI Vision APIリクエストロジック"""
         _, buffer = cv2.imencode(".png", image)
         base64_image = base64.b64encode(buffer).decode("utf-8")
+
+        # プロンプトタイプに応じたテキストを選択
+        prompts = {
+            "standard": "この画像に書かれている日本語のテキストを、改行やスペースは無視して、全ての文字を繋げて書き出してください。",
+            "handwriting": "この画像に書かれている手書きの日本語テキストを正確に読み取ってください。文字の形が不規則でも、できるだけ正確に認識し、改行やスペースは無視して全ての文字を繋げて書き出してください。",
+            "printed": "この画像に書かれている印刷された日本語テキストを正確に読み取ってください。印刷文字の特徴を活かして、改行やスペースは無視して全ての文字を繋げて書き出してください。",
+            "mixed": "この画像に書かれている日本語テキストを読み取ってください。手書きと印刷が混在している可能性がありますが、それぞれの特徴を考慮して正確に認識し、改行やスペースは無視して全ての文字を繋げて書き出してください。",
+            "form": "この画像は帳票やフォームです。各項目の値を正確に読み取ってください。手書きの場合は文字の形が不規則でも正確に認識し、印刷文字の場合はその特徴を活かして読み取ってください。改行やスペースは無視して、各項目の値を正確に書き出してください。"
+        }
+        
+        text_prompt = prompts.get(prompt_type, prompts["standard"])
 
         headers = {
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
@@ -37,7 +48,7 @@ class BaseOCR(ABC):
                     "content": [
                         {
                             "type": "text",
-                            "text": "この画像に書かれている日本語のテキストを、改行やスペースは無視して、全ての文字を繋げて書き出してください。",
+                            "text": text_prompt,
                         },
                         {
                             "type": "image_url",
@@ -109,11 +120,36 @@ class GPT5NanoVisionOCR(BaseOCR):
         return await self._request_openai(image, "gpt-5-nano-2025-08-07")
 
 
+class HandwritingOptimizedOCR(BaseOCR):
+    """手書き文字特化のOCRエンジン"""
+
+    async def run(self, image: np.ndarray) -> Tuple[str, float]:
+        return await self._request_openai(image, "gpt-5-nano-2025-08-07", "handwriting")
+
+
+class FormOptimizedOCR(BaseOCR):
+    """帳票・フォーム特化のOCRエンジン"""
+
+    async def run(self, image: np.ndarray) -> Tuple[str, float]:
+        return await self._request_openai(image, "gpt-5-nano-2025-08-07", "form")
+
+
+class MixedContentOCR(BaseOCR):
+    """手書き・印刷混在コンテンツ用のOCRエンジン"""
+
+    async def run(self, image: np.ndarray) -> Tuple[str, float]:
+        return await self._request_openai(image, "gpt-5-nano-2025-08-07", "mixed")
+
+
 # エンジンの一覧を名前→クラスで公開（UI側が動的に取得するため）
 ENGINES: Dict[str, Type[BaseOCR]] = {
     # 既定: 一次OCRは nano、検証・ダブルチェックに mini を想定
     "GPT-5-nano-2025-08-07": GPT5NanoVisionOCR,
     "GPT-5-mini-2025-08-07": GPT5MiniVisionOCR,
+    # 特化型OCRエンジン
+    "Handwriting-Optimized": HandwritingOptimizedOCR,
+    "Form-Optimized": FormOptimizedOCR,
+    "Mixed-Content": MixedContentOCR,
     # 旧モデルも残しておく（後方互換 / デモ用）
     "GPT-4.1-nano": GPT4oNanoVisionOCR,
     "GPT-4.1-mini": GPT4oMiniVisionOCR,
