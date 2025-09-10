@@ -98,21 +98,23 @@ def main() -> None:
             type=["zip"],
             accept_multiple_files=False,
         )
-        folder_path = st.text_input("またはローカルフォルダパスを入力")
-        st.caption("ZIPやフォルダは一時ディレクトリに展開され、含まれる画像が順次処理されます")
+        # セキュリティのため、ローカルフォルダパス機能は無効化
+        # folder_path = st.text_input("またはローカルフォルダパスを入力")
+        st.caption("ZIPアーカイブは一時ディレクトリに展開され、含まれる画像が順次処理されます")
         if uploaded_zip is not None:
             temp_dir = tempfile.mkdtemp()
             zip_bytes = BytesIO(uploaded_zip.read())
             with zipfile.ZipFile(zip_bytes) as zf:
                 zf.extractall(temp_dir)
             cleanup_dir = temp_dir
-        elif folder_path:
-            if os.path.isdir(folder_path):
-                temp_dir = tempfile.mkdtemp()
-                shutil.copytree(folder_path, temp_dir, dirs_exist_ok=True)
-                cleanup_dir = temp_dir
-            else:
-                st.error("指定されたフォルダが見つかりません")
+        # セキュリティのため、ローカルフォルダパス機能は無効化
+        # elif folder_path:
+        #     if os.path.isdir(folder_path):
+        #         temp_dir = tempfile.mkdtemp()
+        #         shutil.copytree(folder_path, temp_dir, dirs_exist_ok=True)
+        #         cleanup_dir = temp_dir
+        #     else:
+        #         st.error("指定されたフォルダが見つかりません")
         if temp_dir:
             for root, _, files in os.walk(temp_dir):
                 for file in files:

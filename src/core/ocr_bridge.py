@@ -96,49 +96,49 @@ class GPT4oMiniVisionOCR(BaseOCR):
     """GPT-4o mini を利用したOCRエンジン"""
 
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
-        return await self._request_openai(image, "gpt-4.1-mini")
+        return await self._request_openai(image, settings.OPENAI_MODEL_STANDARD)
 
 
 class GPT4oNanoVisionOCR(BaseOCR):
     """GPT-4o nano を利用したOCRエンジン"""
 
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
-        return await self._request_openai(image, "gpt-4.1-nano")
+        return await self._request_openai(image, settings.OPENAI_MODEL_FAST)
 
 
 class GPT5MiniVisionOCR(BaseOCR):
     """GPT-5 mini を利用したOCRエンジン"""
 
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
-        return await self._request_openai(image, "gpt-5-mini-2025-08-07")
+        return await self._request_openai(image, settings.OPENAI_MODEL_HIGH_QUALITY)
 
 
 class GPT5NanoVisionOCR(BaseOCR):
     """GPT-5 nano を利用したOCRエンジン"""
 
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
-        return await self._request_openai(image, "gpt-5-nano-2025-08-07")
+        return await self._request_openai(image, settings.OPENAI_MODEL_ULTRA_FAST)
 
 
 class HandwritingOptimizedOCR(BaseOCR):
     """手書き文字特化のOCRエンジン"""
 
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
-        return await self._request_openai(image, "gpt-5-nano-2025-08-07", "handwriting")
+        return await self._request_openai(image, settings.OPENAI_MODEL_HANDWRITING, "handwriting")
 
 
 class FormOptimizedOCR(BaseOCR):
     """帳票・フォーム特化のOCRエンジン"""
 
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
-        return await self._request_openai(image, "gpt-5-nano-2025-08-07", "form")
+        return await self._request_openai(image, settings.OPENAI_MODEL_FORM, "form")
 
 
 class MixedContentOCR(BaseOCR):
     """手書き・印刷混在コンテンツ用のOCRエンジン"""
 
     async def run(self, image: np.ndarray) -> Tuple[str, float]:
-        return await self._request_openai(image, "gpt-5-nano-2025-08-07", "mixed")
+        return await self._request_openai(image, settings.OPENAI_MODEL_MIXED, "mixed")
 
 
 # エンジンの一覧を名前→クラスで公開（UI側が動的に取得するため）

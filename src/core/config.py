@@ -17,5 +17,14 @@ class Settings(BaseSettings):
     SCORE_WEIGHT_AGREEMENT: float = 0.2
     # 複合スコアの確定閾値（下回ると needs_human=True）
     COMPOSITE_DECISION_THRESHOLD: float = 0.8
+    
+    # OpenAI モデル設定
+    OPENAI_MODEL_STANDARD: str = "gpt-4.1-mini"
+    OPENAI_MODEL_FAST: str = "gpt-4.1-nano"
+    OPENAI_MODEL_HIGH_QUALITY: str = "gpt-5-mini-2025-08-07"
+    OPENAI_MODEL_ULTRA_FAST: str = "gpt-5-nano-2025-08-07"
+    OPENAI_MODEL_HANDWRITING: str = "gpt-5-nano-2025-08-07"
+    OPENAI_MODEL_FORM: str = "gpt-5-nano-2025-08-07"
+    OPENAI_MODEL_MIXED: str = "gpt-5-nano-2025-08-07"
 
 settings = Settings()
